@@ -1,4 +1,4 @@
-FROM ubuntu:23.04
+FROM ubuntu:22.04
 
 ENV DEBIAN_FRONTEND=noninteractive
 
@@ -18,7 +18,7 @@ RUN apt-get install -y wget tar nano curl git
 
 ###########################################
 RUN \
-  git clone https://github.com/dpuiu/MitoHPC && \
+  git clone https://github.com/ngslabex/MitoHPC && \
   chmod a+x $HP_SDIR/*.* && \
   . $HP_SDIR/init.sh && \
   $HP_SDIR/install_sysprerequisites.sh && \
