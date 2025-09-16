@@ -11,40 +11,55 @@ ENV HP_ODIR=out
 ENV HP_IN=in.txt
 ENV PATH="$HP_SDIR:$HP_BDIR:$PATH"
 
-# Tüm RUN komutlarını bash ile çalıştır (dash yerine)
+# Tüm RUN komutlarını bash ile çalıştır
 SHELL ["/bin/bash", "-o", "pipefail", "-c"]
 
-###########################################
-# Temel paketler
+# Temel paketler (sudo dahil!)
 RUN apt-get update -y && \
     apt-get install -y --no-install-recommends \
-      ca-certificates wget curl git nano tar bash coreutils build-essential \
+      ca-certificates wget curl git nano tar bash coreutils \
+      build-essential sudo lsb-release locales tzdata \
       && rm -rf /var/lib/apt/lists/*
 
-###########################################
-# Kaynakları klonla ve kur
-RUN set -euxo pipefail \
+# Repo
+RUN set -eux \
  && git clone https://github.com/ngslabex/MitoHPC "$HP_HDIR" \
- # Betikleri çalıştırılabilir yap (sadece .sh dosyaları)
- && if compgen -G "$HP_SDIR/*.sh" > /dev/null; then chmod a+x "$HP_SDIR"/*.sh; fi \
- # Ortamı içe al (bash ile), değişkenlerin export edilmesini garanti et
- && set -a \
- && source "$HP_SDIR/init.sh" \
- && set +a \
- # Sistem önkoşulları
- && "$HP_SDIR/install_sysprerequisites.sh" \
- # Varsayılan kurulum (referanslar olmadan)
- && "$HP_SDIR/install_prerequisites.sh" \
- # rCRS üçlüsü
- && HP_MT=rCRS  HP_MTC=rCRSC  HP_MTR=rCRSR  "$HP_SDIR/install_prerequisites.sh" \
- # RSRS üçlüsü
- && HP_MT=RSRS  HP_MTC=RSRSC  HP_MTR=RSRSR  "$HP_SDIR/install_prerequisites.sh" \
- # Sadece HP_MT=RSRS ile tekrar (gerekiyorsa)
- && HP_MT=RSRS "$HP_SDIR/install_prerequisites.sh" \
- # Kurulum kontrolü
- && "$HP_SDIR/checkInstall.sh" \
- # Boyutu küçült: örnekler ve önkoşul kaynakları
- && rm -rf /MitoHPC/prerequisites/ /MitoHPC/examples*
+ && if compgen -G "$HP_SDIR/*.sh" > /dev/null; then chmod a+x "$HP_SDIR"/*.sh; fi
 
-# (Opsiyonel) çalışma dizini
+WORKDIR /MitoHPC
+
+# Sistem önkoşulları
+RUN set -eux \
+ && source "$HP_SDIR/init.sh" \
+ && "$HP_SDIR/install_sysprerequisites.sh"
+
+# Varsayılan kurulum
+RUN set -eux \
+ && source "$HP_SDIR/init.sh" \
+ && "$HP_SDIR/install_prerequisites.sh"
+
+# rCRS üçlüsü
+RUN set -eux \
+ && source "$HP_SDIR/init.sh" \
+ && HP_MT=rCRS  HP_MTC=rCRSC  HP_MTR=rCRSR  "$HP_SDIR/install_prerequisites.sh"
+
+# RSRS üçlüsü
+RUN set -eux \
+ && source "$HP_SDIR/init.sh" \
+ && HP_MT=RSRS  HP_MTC=RSRSC  HP_MTR=RSRSR  "$HP_SDIR/install_prerequisites.sh"
+
+# Sadece HP_MT=RSRS (gerekliyse)
+RUN set -eux \
+ && source "$HP_SDIR/init.sh" \
+ && HP_MT=RSRS "$HP_SDIR/install_prerequisites.sh"
+
+# Kurulum kontrolü
+RUN set -eux \
+ && source "$HP_SDIR/init.sh" \
+ && "$HP_SDIR/checkInstall.sh"
+
+# Temizlik
+RUN rm -rf /MitoHPC/prerequisites/ /MitoHPC/examples*
+
+# Çalışma dizini
 WORKDIR /work
