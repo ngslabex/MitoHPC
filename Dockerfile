@@ -14,11 +14,14 @@ ENV PATH="$HP_SDIR:$HP_BDIR:$PATH"
 # Tüm RUN komutlarını bash ile çalıştır
 SHELL ["/bin/bash", "-o", "pipefail", "-c"]
 
-# Temel paketler (sudo dahil!)
+# Temel paketler (sudo dahil!)  + sistem bağımlılıkları
 RUN apt-get update -y && \
     apt-get install -y --no-install-recommends \
       ca-certificates wget curl git nano tar bash coreutils \
       build-essential sudo lsb-release locales tzdata \
+      openjdk-17-jre-headless perl python3 python3-pip \
+      unzip autoconf automake libtool pkg-config \
+      zlib1g-dev libbz2-dev liblzma-dev libcurl4-openssl-dev \
       && rm -rf /var/lib/apt/lists/*
 
 # Repo
@@ -56,7 +59,11 @@ RUN set -eux \
 # Kurulum kontrolü
 RUN set -eux \
  && source "$HP_SDIR/init.sh" \
- && "$HP_SDIR/checkInstall.sh"
+ && bash -x "$HP_SDIR/checkInstall.sh" \
+    || { code=$?; echo "checkInstall FAILED (exit $code)"; \
+         echo "---- $HP_SDIR/checkInstall.log ----" ; cat "$HP_SDIR/checkInstall.log" || true; \
+         echo "---- /MitoHPC/checkInstall.log ----" ; cat "/MitoHPC/checkInstall.log" || true; \
+         exit $code; }
 
 # Temizlik
 RUN rm -rf /MitoHPC/prerequisites/ /MitoHPC/examples*
